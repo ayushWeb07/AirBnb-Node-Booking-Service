@@ -8,4 +8,24 @@ const createSchema = z.object({
     status: z.enum(["pending", "confirmed", "cancelled"])
 });
 
-export { createSchema };
+const getByIdSchema = z.object({
+    id: z.coerce.number().nonnegative(),
+});
+
+const removeSchema = z.object({
+    id: z.coerce.number().nonnegative(),
+});
+
+const updateBodySchema = z.object({
+    userId: z.number().nonnegative().optional(),
+    hotelId: z.number().nonnegative().optional(),
+    bookingAmount: z.number().gt(0).optional(),
+    totalGuests: z.number().gt(0).optional(),
+    status: z.enum(["pending", "confirmed", "cancelled"]).optional()
+});
+
+const updateUrlParamsSchema = z.object({
+    id: z.coerce.number().nonnegative(),
+});
+
+export { createSchema, getByIdSchema, removeSchema, updateBodySchema, updateUrlParamsSchema };

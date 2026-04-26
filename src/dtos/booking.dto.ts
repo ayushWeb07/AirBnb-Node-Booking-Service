@@ -1,10 +1,12 @@
-enum BookingStatus {
-    PENDING= "pending",
-    CONFIRMED= "confirmed",
-    CANCELLED= "cancelled"
-}
+const BookingStatus= {
+    PENDING: "pending",
+    CONFIRMED: "confirmed",
+    CANCELLED: "cancelled"
+} as const;
 
-interface create {
+type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
+
+export interface CreateBookingDto {
     userId: number;
     hotelId: number;
     bookingAmount: number;
@@ -12,4 +14,10 @@ interface create {
     status: BookingStatus;
 }
 
-export { create };
+export interface UpdateBookingDto {
+    userId?: number;
+    hotelId?: number;
+    bookingAmount?: number;
+    totalGuests?: number;
+    status?: BookingStatus;
+}
