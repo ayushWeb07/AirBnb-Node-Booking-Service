@@ -8,6 +8,10 @@ interface ServerConfig {
   SENTRY_DSN: string;
 }
 
+interface DbConfig {
+  DATABASE_URL: string;
+}
+
 const serverConfig: ServerConfig = {
   PORT: Number(process.env.PORT) || 3000,
   BETTERSTACK_HEARTBEAT_URL: process.env.BETTERSTACK_HEARTBEAT_URL || "",
@@ -16,4 +20,8 @@ const serverConfig: ServerConfig = {
   SENTRY_DSN: process.env.SENTRY_DSN || "",
 };
 
-export { serverConfig };
+const dbConfig: DbConfig = {
+  DATABASE_URL: process.env.DATABASE_URL || "",
+};
+
+export { serverConfig, dbConfig };
