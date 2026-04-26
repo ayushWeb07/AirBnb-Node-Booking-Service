@@ -1,10 +1,6 @@
 import type { Request, Response } from "express";
-import {InternalServerError} from "../utils/errors/app.error.ts";
-import {logger} from "../config/logger.config.ts";
 
 const getMany = (req: Request, res: Response): void => {
-  logger.error("users: getAll -> failure");
-  throw new InternalServerError(":)")
   res.status(200).json(`Get Many Users`);
 };
 
