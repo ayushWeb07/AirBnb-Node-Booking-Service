@@ -1,12 +1,12 @@
 import { logger } from "../config/logger.config.ts";
-import * as bookingDto from "../dtos/booking.dto.ts";
+import type { CreateBookingDto, UpdateBookingDto } from "../dtos/booking.dto.ts"
 import { InternalServerError, NotFoundError } from "../utils/errors/app.error.ts";
 import { db } from "../db/index.ts";
 import { bookings } from "../db/schemas/bookings.ts";
 import { eq } from "drizzle-orm"
 
 // create a booking entry
-const create = async (bookingData: bookingDto.create) => {
+const create = async (bookingData: CreateBookingDto) => {
     try {
         const [newBooking] = await db
             .insert(bookings)
@@ -131,7 +131,7 @@ const remove = async (id: number) => {
 };
 
 // update a single booking entry
-const update = async (id: number, bookingData: bookingDto.update) => {
+const update = async (id: number, bookingData: UpdateBookingDto) => {
     try {
 
         const updatedBooking= await db
