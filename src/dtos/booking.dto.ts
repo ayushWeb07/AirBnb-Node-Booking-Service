@@ -12,4 +12,12 @@ interface create {
     status: BookingStatus;
 }
 
-export { create };
+interface update {
+    userId?: number;
+    hotelId?: number;
+    bookingAmount?: number;
+    totalGuests?: number;
+    status?: BookingStatus;
+}
+
+export { create, update };
