@@ -20,8 +20,7 @@ const updateBodySchema = z.object({
     userId: z.number().nonnegative().optional(),
     hotelId: z.number().nonnegative().optional(),
     bookingAmount: z.number().gt(0).optional(),
-    totalGuests: z.number().gt(0).optional(),
-    status: z.enum(["pending", "confirmed", "cancelled"]).optional()
+    totalGuests: z.number().gt(0).optional()
 });
 
 const updateUrlParamsSchema = z.object({

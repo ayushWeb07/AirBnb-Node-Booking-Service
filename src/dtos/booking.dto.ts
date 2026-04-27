@@ -19,5 +19,4 @@ export interface UpdateBookingDto {
     hotelId?: number;
     bookingAmount?: number;
     totalGuests?: number;
-    status?: BookingStatus;
 }

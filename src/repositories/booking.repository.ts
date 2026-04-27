@@ -178,7 +178,6 @@ const removeBookingById = async (id: number) => {
 // update a single booking entry
 const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
     try {
-
         const updatedBooking= await db
             .update(bookings)
             .set(bookingData)
