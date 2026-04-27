@@ -17,13 +17,13 @@ const createBooking = async (bookingData: CreateBookingDto) => {
             })
             .$returningId()
 
-        logger.info("Bookings: create -> success", {
+        logger.info("Bookings: createBooking endpoint -> success", {
             id: newBooking,
         });
 
         return newBooking;
     } catch (error) {
-        logger.error("Bookings: create -> failure", error);
+        logger.error("Bookings: createBooking endpoint -> failure", error);
 
         throw new InternalServerError(
             "Something went wrong while creating a new booking",
@@ -46,7 +46,7 @@ const confirmBookingStatus = async (id: number) => {
             );
 
         if (!updatedBooking[0].affectedRows) {
-            logger.error("Bookings: confirm -> failure", {
+            logger.error("Bookings: confirmBookingStatus endpoint -> failure", {
                 id,
                 error: "Booking not found",
             });
@@ -54,7 +54,7 @@ const confirmBookingStatus = async (id: number) => {
             throw new NotFoundError("Booking not found");
         }
 
-        logger.info("Bookings: confirm -> success", {
+        logger.info("Bookings: confirmBookingStatus endpoint -> success", {
             id,
         });
     } catch (error) {
@@ -63,10 +63,51 @@ const confirmBookingStatus = async (id: number) => {
         }
 
         else {
-            logger.error("Bookings: confirm -> failure", error);
+            logger.error("Bookings: confirmBookingStatus endpoint -> failure", error);
 
             throw new InternalServerError(
                 "Something went wrong while confirming the booking",
+                error instanceof Error ? error.stack : undefined,
+            );
+        }
+    }
+};
+
+// cancellation on booking entry
+const cancelBookingStatus = async (id: number) => {
+    try {
+
+        const updatedBooking= await db
+            .update(bookings)
+            .set({
+                status: "cancelled"
+            })
+            .where(
+                eq(bookings.id, id)
+            );
+
+        if (!updatedBooking[0].affectedRows) {
+            logger.error("Bookings: cancelBookingStatus endpoint -> failure", {
+                id,
+                error: "Booking not found",
+            });
+
+            throw new NotFoundError("Booking not found");
+        }
+
+        logger.info("Bookings: cancelBookingStatus endpoint -> success", {
+            id,
+        });
+    } catch (error) {
+        if (error instanceof NotFoundError) {
+            throw error;
+        }
+
+        else {
+            logger.error("Bookings: cancelBookingStatus endpoint -> failure", error);
+
+            throw new InternalServerError(
+                "Something went wrong while cancelling the booking",
                 error instanceof Error ? error.stack : undefined,
             );
         }
@@ -80,13 +121,13 @@ const getAllBookings = async () => {
             .select()
             .from(bookings);
 
-        logger.info("Bookings: getAll -> success", {
+        logger.info("Bookings: getAllBookings endpoint -> success", {
             count: allBookings.length,
         });
 
         return allBookings;
     } catch (error) {
-        logger.error("Bookings: getAll -> failure", error);
+        logger.error("Bookings: getAllBookings endpoint -> failure", error);
 
         throw new InternalServerError(
             "Something went wrong while getting all the bookings",
@@ -106,14 +147,14 @@ const getBookingById = async (id: number) => {
             );
 
         if (!booking.length) {
-            logger.error("Bookings: getById -> failure", {
+            logger.error("Bookings: getBookingById endpoint -> failure", {
                 id,
                 error: "Booking not found",
             });
 
             throw new NotFoundError("Booking not found");
         } else {
-            logger.info("Bookings: getById -> success", {
+            logger.info("Bookings: getBookingById endpoint -> success", {
                 id: booking[0],
             });
 
@@ -126,7 +167,7 @@ const getBookingById = async (id: number) => {
         }
 
         else {
-            logger.error("Bookings: getById -> failure", error);
+            logger.error("Bookings: getBookingById endpoint -> failure", error);
 
             throw new InternalServerError(
                 "Something went wrong while getting the booking by id",
@@ -148,7 +189,7 @@ const removeBookingById = async (id: number) => {
             );
 
         if (!deletedBooking[0].affectedRows) {
-            logger.error("Bookings: remove -> failure", {
+            logger.error("Bookings: removeBookingById endpoint -> failure", {
                 id,
                 error: "Booking not found",
             });
@@ -156,7 +197,7 @@ const removeBookingById = async (id: number) => {
             throw new NotFoundError("Booking not found");
         }
 
-        logger.info("Bookings: remove -> success", {
+        logger.info("Bookings: removeBookingById endpoint -> success", {
             id,
         });
     } catch (error) {
@@ -165,7 +206,7 @@ const removeBookingById = async (id: number) => {
         }
 
         else {
-            logger.error("Bookings: remove -> failure", error);
+            logger.error("Bookings: removeBookingById endpoint -> failure", error);
 
             throw new InternalServerError(
                 "Something went wrong while removing the booking",
@@ -186,7 +227,7 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
             );
 
         if (!updatedBooking[0].affectedRows) {
-            logger.error("Bookings: update -> failure", {
+            logger.error("Bookings: updateBooking endpoint -> failure", {
                 id,
                 error: "Booking not found",
             });
@@ -194,7 +235,7 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
             throw new NotFoundError("Booking not found");
         }
 
-        logger.info("Bookings: update -> success", {
+        logger.info("Bookings: updateBooking endpoint -> success", {
             id,
         });
     } catch (error) {
@@ -203,7 +244,7 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
         }
 
         else {
-            logger.error("Bookings: update -> failure", error);
+            logger.error("Bookings: updateBooking endpoint -> failure", error);
 
             throw new InternalServerError(
                 "Something went wrong while updating the booking",
@@ -213,4 +254,4 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
     }
 };
 
-export { createBooking, confirmBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };
+export { createBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };
