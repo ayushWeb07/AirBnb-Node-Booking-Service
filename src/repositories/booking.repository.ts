@@ -1,6 +1,6 @@
 import { logger } from "../config/logger.config.ts";
 import type { CreateBookingDto, UpdateBookingDto } from "../dtos/booking.dto.ts"
-import { InternalServerError, NotFoundError } from "../utils/errors/app.error.ts";
+import {BadRequestError, InternalServerError, NotFoundError} from "../utils/errors/app.error.ts";
 import { db } from "../db/index.ts";
 import { bookings } from "../db/schemas/bookings.ts";
 import { eq } from "drizzle-orm"
@@ -39,10 +39,67 @@ const createBooking = async (bookingData: CreateBookingDto) => {
     }
 }
 
-// finalize / confirm booking entry
+// finalize the booking
+const finalizeBooking = async (idempotencyKey: string) => {
+    try {
+        // find the booking with that idempotencyKey
+        const [booking] = await db
+            .select()
+            .from(bookings)
+            .where(
+                eq(bookings.idempotencyKey, idempotencyKey)
+            );
+
+        if (!booking) {
+            logger.error("Bookings: finalizeBooking endpoint -> failure", {
+                idempotencyKey,
+                error: "Booking not found with such idempotencyKey",
+            });
+
+            throw new NotFoundError("Booking not found with such idempotencyKey");
+        }
+
+        else {
+            // check the booking status and throw error if its not pending
+            if(booking.status !== "pending") {
+                logger.info("Bookings: finalizeBooking endpoint -> failure", {
+                    id: booking.id,
+                    idempotencyKey,
+                    error: `Booking with such idempotencyKey has a status: ${booking.status}`
+                });
+
+                throw new BadRequestError(`Booking with such idempotencyKey has a status: ${booking.status}`)
+            }
+
+            // finalize booking i.e., mark it as completed
+            else {
+                await confirmBookingStatus(booking.id);
+
+                logger.info("Bookings: finalizeBooking endpoint -> success", {
+                    id: booking.id,
+                });
+            }
+        }
+
+    } catch (error) {
+        if (error instanceof NotFoundError || error instanceof BadRequestError) {
+            throw error;
+        }
+
+        else {
+            logger.error("Bookings: finalizeBooking endpoint -> failure", error);
+
+            throw new InternalServerError(
+                "Something went wrong while finalizing the booking",
+                error instanceof Error ? error.stack : undefined,
+            );
+        }
+    }
+}
+
+// confirm booking status
 const confirmBookingStatus = async (id: number) => {
     try {
-
         const updatedBooking= await db
             .update(bookings)
             .set({
@@ -80,7 +137,7 @@ const confirmBookingStatus = async (id: number) => {
     }
 };
 
-// cancellation on booking entry
+// cancel booking status
 const cancelBookingStatus = async (id: number) => {
     try {
 
@@ -146,14 +203,14 @@ const getAllBookings = async () => {
 // get a single booking entry by id
 const getBookingById = async (id: number) => {
     try {
-        const booking = await db
+        const [booking] = await db
             .select()
             .from(bookings)
             .where(
                 eq(bookings.id, id)
             );
 
-        if (!booking.length) {
+        if (!booking) {
             logger.error("Bookings: getBookingById endpoint -> failure", {
                 id,
                 error: "Booking not found",
@@ -161,14 +218,11 @@ const getBookingById = async (id: number) => {
 
             throw new NotFoundError("Booking not found");
         } else {
-            logger.info("Bookings: getBookingById endpoint -> success", {
-                id: booking[0],
-            });
+            logger.info("Bookings: getBookingById endpoint -> success", booking);
 
-            return booking[0];
+            return booking;
         }
     } catch (error) {
-
         if (error instanceof NotFoundError) {
             throw error;
         }
@@ -261,4 +315,4 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
     }
 };
 
-export { createBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };
+export { createBooking, finalizeBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };
