@@ -6,8 +6,8 @@ import { bookings } from "../db/schemas/bookings.ts";
 import { eq } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid";
 
-// create a dummy booking
-const create = async (bookingData: CreateBookingDto) => {
+// create a booking
+const createBooking = async (bookingData: CreateBookingDto) => {
     try {
         const [newBooking] = await db
             .insert(bookings)
@@ -32,8 +32,49 @@ const create = async (bookingData: CreateBookingDto) => {
     }
 }
 
+// finalize / confirm booking entry
+const confirmBookingStatus = async (id: number) => {
+    try {
+
+        const updatedBooking= await db
+            .update(bookings)
+            .set({
+                status: "confirmed"
+            })
+            .where(
+                eq(bookings.id, id)
+            );
+
+        if (!updatedBooking[0].affectedRows) {
+            logger.error("Bookings: confirm -> failure", {
+                id,
+                error: "Booking not found",
+            });
+
+            throw new NotFoundError("Booking not found");
+        }
+
+        logger.info("Bookings: confirm -> success", {
+            id,
+        });
+    } catch (error) {
+        if (error instanceof NotFoundError) {
+            throw error;
+        }
+
+        else {
+            logger.error("Bookings: confirm -> failure", error);
+
+            throw new InternalServerError(
+                "Something went wrong while confirming the booking",
+                error instanceof Error ? error.stack : undefined,
+            );
+        }
+    }
+};
+
 // get all booking entries
-const getAll = async () => {
+const getAllBookings = async () => {
     try {
         const allBookings = await db
             .select()
@@ -55,7 +96,7 @@ const getAll = async () => {
 };
 
 // get a single booking entry by id
-const getById = async (id: number) => {
+const getBookingById = async (id: number) => {
     try {
         const booking = await db
             .select()
@@ -96,7 +137,7 @@ const getById = async (id: number) => {
 };
 
 // remove booking entry by id
-const remove = async (id: number) => {
+const removeBookingById = async (id: number) => {
     try {
         const deletedBooking = await db
             .delete(bookings)
@@ -135,7 +176,7 @@ const remove = async (id: number) => {
 };
 
 // update a single booking entry
-const update = async (id: number, bookingData: UpdateBookingDto) => {
+const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
     try {
 
         const updatedBooking= await db
@@ -173,4 +214,4 @@ const update = async (id: number, bookingData: UpdateBookingDto) => {
     }
 };
 
-export { create, getAll, getById, remove, update };
+export { createBooking, confirmBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };
