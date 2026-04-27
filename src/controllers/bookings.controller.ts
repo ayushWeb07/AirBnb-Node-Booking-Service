@@ -15,6 +15,26 @@ const createBooking = async (req: Request, res: Response) => {
     });
 };
 
+const confirmBookingStatus = async (req: Request, res: Response) => {
+    await bookingService.confirmBookingStatus(Number(req.params.id));
+
+    res.status(StatusCodes.OK).json({
+        message: "Confirmed the booking successfully",
+        data: null,
+        success: true
+    });
+};
+
+const cancelBookingStatus = async (req: Request, res: Response) => {
+    await bookingService.cancelBookingStatus(Number(req.params.id));
+
+    res.status(StatusCodes.OK).json({
+        message: "Cancelled the booking successfully",
+        data: null,
+        success: true
+    });
+};
+
 const getAllBookings = async (req: Request, res: Response) => {
     const bookings = await bookingService.getAllBookings();
 
@@ -36,23 +56,23 @@ const getBookingById = async (req: Request, res: Response) => {
 };
 
 const removeBookingById = async (req: Request, res: Response) => {
-    const booking = await bookingService.removeBookingById(Number(req.params.id));
+    await bookingService.removeBookingById(Number(req.params.id));
 
     res.status(StatusCodes.OK).json({
         message: "Removed the booking successfully",
-        data: booking,
+        data: null,
         success: true
     });
 };
 
 const updateBooking = async (req: Request, res: Response) => {
-    const booking = await bookingService.updateBooking(Number(req.params.id), req.body);
+    await bookingService.updateBooking(Number(req.params.id), req.body);
 
     res.status(StatusCodes.OK).json({
         message: "Updated the booking successfully",
-        data: booking,
+        data: null,
         success: true
     });
 };
 
-export { createBooking, getAllBookings, getBookingById, removeBookingById, updateBooking };
+export { createBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };

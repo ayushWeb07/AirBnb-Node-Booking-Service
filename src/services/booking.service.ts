@@ -6,6 +6,14 @@ const createBooking = async (bookingData: CreateBookingDto) => {
     return booking;
 };
 
+const confirmBookingStatus = async (id: number) => {
+    await bookingRepository.confirmBookingStatus(id);
+};
+
+const cancelBookingStatus = async (id: number) => {
+    await bookingRepository.cancelBookingStatus(id);
+};
+
 const getAllBookings = async () => {
     const bookings = await bookingRepository.getAllBookings();
     return bookings;
@@ -24,4 +32,4 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
     await bookingRepository.updateBooking(id, bookingData);
 };
 
-export { createBooking, getAllBookings, getBookingById, removeBookingById, updateBooking };
+export { createBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };

@@ -1,6 +1,6 @@
 import z from "zod";
 
-const createSchema = z.object({
+const createBookingSchema = z.object({
     userId: z.number().nonnegative(),
     hotelId: z.number().nonnegative(),
     bookingAmount: z.number().gt(0),
@@ -8,23 +8,31 @@ const createSchema = z.object({
     status: z.enum(["pending", "confirmed", "cancelled"])
 });
 
-const getByIdSchema = z.object({
+const getBookingByIdSchema = z.object({
     id: z.coerce.number().nonnegative(),
 });
 
-const removeSchema = z.object({
+const removeBookingByIdSchema = z.object({
     id: z.coerce.number().nonnegative(),
 });
 
-const updateBodySchema = z.object({
+const updateBookingBodySchema = z.object({
     userId: z.number().nonnegative().optional(),
     hotelId: z.number().nonnegative().optional(),
     bookingAmount: z.number().gt(0).optional(),
     totalGuests: z.number().gt(0).optional()
 });
 
-const updateUrlParamsSchema = z.object({
+const updateBookingUrlParamsSchema = z.object({
     id: z.coerce.number().nonnegative(),
 });
 
-export { createSchema, getByIdSchema, removeSchema, updateBodySchema, updateUrlParamsSchema };
+const confirmBookingStatusSchema = z.object({
+    id: z.coerce.number().nonnegative(),
+});
+
+const cancelBookingStatusSchema = z.object({
+    id: z.coerce.number().nonnegative(),
+});
+
+export { createBookingSchema, getBookingByIdSchema, removeBookingByIdSchema, updateBookingBodySchema, updateBookingUrlParamsSchema, confirmBookingStatusSchema, cancelBookingStatusSchema };

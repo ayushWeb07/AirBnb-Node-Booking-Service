@@ -9,19 +9,26 @@ import { v4 as uuidv4 } from "uuid";
 // create a booking
 const createBooking = async (bookingData: CreateBookingDto) => {
     try {
+        // generate an idempotency key
+        const idempotencyKey= uuidv4()
+
         const [newBooking] = await db
             .insert(bookings)
             .values({
                 ...bookingData,
-                idempotencyKey: uuidv4()
+                idempotencyKey
             })
             .$returningId()
 
         logger.info("Bookings: createBooking endpoint -> success", {
-            id: newBooking,
+            ...newBooking,
+            idempotencyKey
         });
 
-        return newBooking;
+        return {
+            ...newBooking,
+            idempotencyKey
+        };
     } catch (error) {
         logger.error("Bookings: createBooking endpoint -> failure", error);
 
