@@ -4,13 +4,17 @@ import { InternalServerError, NotFoundError } from "../utils/errors/app.error.ts
 import { db } from "../db/index.ts";
 import { bookings } from "../db/schemas/bookings.ts";
 import { eq } from "drizzle-orm"
+import { v4 as uuidv4 } from "uuid";
 
-// create a booking entry
+// create a dummy booking
 const create = async (bookingData: CreateBookingDto) => {
     try {
         const [newBooking] = await db
             .insert(bookings)
-            .values(bookingData)
+            .values({
+                ...bookingData,
+                idempotencyKey: uuidv4()
+            })
             .$returningId()
 
         logger.info("Bookings: create -> success", {
@@ -26,7 +30,7 @@ const create = async (bookingData: CreateBookingDto) => {
             error instanceof Error ? error.stack : undefined,
         );
     }
-};
+}
 
 // get all booking entries
 const getAll = async () => {
