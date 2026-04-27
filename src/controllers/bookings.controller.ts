@@ -15,6 +15,16 @@ const createBooking = async (req: Request, res: Response) => {
     });
 };
 
+const finalizeBooking = async (req: Request, res: Response) => {
+    await bookingService.finalizeBooking(req.params.idempotencyKey as string);
+
+    res.status(StatusCodes.OK).json({
+        message: "Finalized the booking successfully",
+        data: null,
+        success: true
+    });
+};
+
 const confirmBookingStatus = async (req: Request, res: Response) => {
     await bookingService.confirmBookingStatus(Number(req.params.id));
 
@@ -75,4 +85,4 @@ const updateBooking = async (req: Request, res: Response) => {
     });
 };
 
-export { createBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };
+export { createBooking, finalizeBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };

@@ -15,6 +15,7 @@ router.get("/:id", validateRequestUrlParams(bookingValidator.getBookingByIdSchem
 router.patch("/confirm/:id", validateRequestUrlParams(bookingValidator.confirmBookingStatusSchema), bookingsController.confirmBookingStatus);
 router.patch("/cancel/:id", validateRequestUrlParams(bookingValidator.cancelBookingStatusSchema), bookingsController.cancelBookingStatus);
 router.post("/", validateRequestBody(bookingValidator.createBookingSchema), bookingsController.createBooking);
+router.patch("/finalize/:idempotencyKey", validateRequestUrlParams(bookingValidator.finalizeBookingSchema), bookingsController.finalizeBooking);
 router.delete("/:id", validateRequestUrlParams(bookingValidator.removeBookingByIdSchema), bookingsController.removeBookingById);
 router.patch("/:id", validateRequestUrlParams(bookingValidator.updateBookingUrlParamsSchema), validateRequestBody(bookingValidator.updateBookingBodySchema), bookingsController.updateBooking);
 

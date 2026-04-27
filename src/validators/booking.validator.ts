@@ -35,4 +35,8 @@ const cancelBookingStatusSchema = z.object({
     id: z.coerce.number().nonnegative(),
 });
 
-export { createBookingSchema, getBookingByIdSchema, removeBookingByIdSchema, updateBookingBodySchema, updateBookingUrlParamsSchema, confirmBookingStatusSchema, cancelBookingStatusSchema };
+const finalizeBookingSchema = z.object({
+    idempotencyKey: z.uuidv4(),
+});
+
+export { createBookingSchema, finalizeBookingSchema, getBookingByIdSchema, removeBookingByIdSchema, updateBookingBodySchema, updateBookingUrlParamsSchema, confirmBookingStatusSchema, cancelBookingStatusSchema };

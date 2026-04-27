@@ -6,6 +6,10 @@ const createBooking = async (bookingData: CreateBookingDto) => {
     return booking;
 };
 
+const finalizeBooking = async (idempotencyKey: string) => {
+    await bookingRepository.finalizeBooking(idempotencyKey);
+};
+
 const confirmBookingStatus = async (id: number) => {
     await bookingRepository.confirmBookingStatus(id);
 };
@@ -32,4 +36,4 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
     await bookingRepository.updateBooking(id, bookingData);
 };
 
-export { createBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };
+export { createBooking, finalizeBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };
