@@ -5,7 +5,6 @@ const createBookingSchema = z.object({
     hotelId: z.number().nonnegative(),
     bookingAmount: z.number().gt(0),
     totalGuests: z.number().gt(0),
-    status: z.enum(["pending", "confirmed", "cancelled"])
 });
 
 const getBookingByIdSchema = z.object({
