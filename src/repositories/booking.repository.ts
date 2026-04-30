@@ -100,7 +100,7 @@ const finalizeBooking = async (idempotencyKey: string) => {
 // confirm booking status
 const confirmBookingStatus = async (id: number) => {
     try {
-        const updatedBooking= await db
+        const [result]= await db
             .update(bookings)
             .set({
                 status: "confirmed"
@@ -109,7 +109,7 @@ const confirmBookingStatus = async (id: number) => {
                 eq(bookings.id, id)
             );
 
-        if (!updatedBooking[0].affectedRows) {
+        if (result.affectedRows === 0) {
             logger.error("Bookings: confirmBookingStatus endpoint -> failure", {
                 id,
                 error: "Booking not found",
@@ -140,8 +140,7 @@ const confirmBookingStatus = async (id: number) => {
 // cancel booking status
 const cancelBookingStatus = async (id: number) => {
     try {
-
-        const updatedBooking= await db
+        const [result]= await db
             .update(bookings)
             .set({
                 status: "cancelled"
@@ -150,7 +149,7 @@ const cancelBookingStatus = async (id: number) => {
                 eq(bookings.id, id)
             );
 
-        if (!updatedBooking[0].affectedRows) {
+        if (result.affectedRows === 0) {
             logger.error("Bookings: cancelBookingStatus endpoint -> failure", {
                 id,
                 error: "Booking not found",
@@ -241,7 +240,7 @@ const getBookingById = async (id: number) => {
 // remove booking entry by id
 const removeBookingById = async (id: number) => {
     try {
-        const deletedBooking = await db
+        const [result] = await db
             .delete(bookings)
             .where(
                 eq(
@@ -249,7 +248,7 @@ const removeBookingById = async (id: number) => {
                 )
             );
 
-        if (!deletedBooking[0].affectedRows) {
+        if (result.affectedRows === 0) {
             logger.error("Bookings: removeBookingById endpoint -> failure", {
                 id,
                 error: "Booking not found",
@@ -280,14 +279,14 @@ const removeBookingById = async (id: number) => {
 // update a single booking entry
 const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
     try {
-        const updatedBooking= await db
+        const [result]= await db
             .update(bookings)
             .set(bookingData)
             .where(
                 eq(bookings.id, id)
             );
 
-        if (!updatedBooking[0].affectedRows) {
+        if (result.affectedRows === 0) {
             logger.error("Bookings: updateBooking endpoint -> failure", {
                 id,
                 error: "Booking not found",
