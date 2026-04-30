@@ -65,10 +65,10 @@ const finalizeBooking = async (idempotencyKey: string) => {
                 logger.info("Bookings: finalizeBooking endpoint -> failure", {
                     id: booking.id,
                     idempotencyKey,
-                    error: `Booking with such idempotencyKey has a status: ${booking.status}`
+                    error: `Booking with such idempotencyKey is already ${booking.status}`
                 });
 
-                throw new BadRequestError(`Booking with such idempotencyKey has a status: ${booking.status}`)
+                throw new BadRequestError(`Booking with such idempotencyKey is already ${booking.status}`)
             }
 
             // finalize booking i.e., mark it as completed
