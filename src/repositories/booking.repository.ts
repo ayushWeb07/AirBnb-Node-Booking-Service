@@ -1,47 +1,196 @@
 import { logger } from "../config/logger.config.ts";
 import type { CreateBookingDto, UpdateBookingDto } from "../dtos/booking.dto.ts"
-import { InternalServerError, NotFoundError } from "../utils/errors/app.error.ts";
+import {BadRequestError, InternalServerError, NotFoundError} from "../utils/errors/app.error.ts";
 import { db } from "../db/index.ts";
 import { bookings } from "../db/schemas/bookings.ts";
 import { eq } from "drizzle-orm"
+import { v4 as uuidv4 } from "uuid";
 
-// create a booking entry
-const create = async (bookingData: CreateBookingDto) => {
+// create a booking
+const createBooking = async (bookingData: CreateBookingDto) => {
     try {
+        // generate an idempotency key
+        const idempotencyKey= uuidv4()
+
         const [newBooking] = await db
             .insert(bookings)
-            .values(bookingData)
+            .values({
+                ...bookingData,
+                idempotencyKey
+            })
             .$returningId()
 
-        logger.info("Bookings: create -> success", {
-            id: newBooking,
+        logger.info("Bookings: createBooking endpoint -> success", {
+            ...newBooking,
+            idempotencyKey
         });
 
-        return newBooking;
+        return {
+            ...newBooking,
+            idempotencyKey
+        };
     } catch (error) {
-        logger.error("Bookings: create -> failure", error);
+        logger.error("Bookings: createBooking endpoint -> failure", error);
 
         throw new InternalServerError(
             "Something went wrong while creating a new booking",
             error instanceof Error ? error.stack : undefined,
         );
     }
+}
+
+// finalize the booking
+const finalizeBooking = async (idempotencyKey: string) => {
+    try {
+        // find the booking with that idempotencyKey
+        const [booking] = await db
+            .select()
+            .from(bookings)
+            .where(
+                eq(bookings.idempotencyKey, idempotencyKey)
+            );
+
+        if (!booking) {
+            logger.error("Bookings: finalizeBooking endpoint -> failure", {
+                idempotencyKey,
+                error: "Booking not found with such idempotencyKey",
+            });
+
+            throw new NotFoundError("Booking not found with such idempotencyKey");
+        }
+
+        else {
+            // check the booking status and throw error if its not pending
+            if(booking.status !== "pending") {
+                logger.info("Bookings: finalizeBooking endpoint -> failure", {
+                    id: booking.id,
+                    idempotencyKey,
+                    error: `Booking with such idempotencyKey is already ${booking.status}`
+                });
+
+                throw new BadRequestError(`Booking with such idempotencyKey is already ${booking.status}`)
+            }
+
+            // finalize booking i.e., mark it as completed
+            else {
+                await confirmBookingStatus(booking.id);
+
+                logger.info("Bookings: finalizeBooking endpoint -> success", {
+                    id: booking.id,
+                });
+            }
+        }
+
+    } catch (error) {
+        if (error instanceof NotFoundError || error instanceof BadRequestError) {
+            throw error;
+        }
+
+        else {
+            logger.error("Bookings: finalizeBooking endpoint -> failure", error);
+
+            throw new InternalServerError(
+                "Something went wrong while finalizing the booking",
+                error instanceof Error ? error.stack : undefined,
+            );
+        }
+    }
+}
+
+// confirm booking status
+const confirmBookingStatus = async (id: number) => {
+    try {
+        const [result]= await db
+            .update(bookings)
+            .set({
+                status: "confirmed"
+            })
+            .where(
+                eq(bookings.id, id)
+            );
+
+        if (result.affectedRows === 0) {
+            logger.error("Bookings: confirmBookingStatus endpoint -> failure", {
+                id,
+                error: "Booking not found",
+            });
+
+            throw new NotFoundError("Booking not found");
+        }
+
+        logger.info("Bookings: confirmBookingStatus endpoint -> success", {
+            id,
+        });
+    } catch (error) {
+        if (error instanceof NotFoundError) {
+            throw error;
+        }
+
+        else {
+            logger.error("Bookings: confirmBookingStatus endpoint -> failure", error);
+
+            throw new InternalServerError(
+                "Something went wrong while confirming the booking",
+                error instanceof Error ? error.stack : undefined,
+            );
+        }
+    }
+};
+
+// cancel booking status
+const cancelBookingStatus = async (id: number) => {
+    try {
+        const [result]= await db
+            .update(bookings)
+            .set({
+                status: "cancelled"
+            })
+            .where(
+                eq(bookings.id, id)
+            );
+
+        if (result.affectedRows === 0) {
+            logger.error("Bookings: cancelBookingStatus endpoint -> failure", {
+                id,
+                error: "Booking not found",
+            });
+
+            throw new NotFoundError("Booking not found");
+        }
+
+        logger.info("Bookings: cancelBookingStatus endpoint -> success", {
+            id,
+        });
+    } catch (error) {
+        if (error instanceof NotFoundError) {
+            throw error;
+        }
+
+        else {
+            logger.error("Bookings: cancelBookingStatus endpoint -> failure", error);
+
+            throw new InternalServerError(
+                "Something went wrong while cancelling the booking",
+                error instanceof Error ? error.stack : undefined,
+            );
+        }
+    }
 };
 
 // get all booking entries
-const getAll = async () => {
+const getAllBookings = async () => {
     try {
         const allBookings = await db
             .select()
             .from(bookings);
 
-        logger.info("Bookings: getAll -> success", {
+        logger.info("Bookings: getAllBookings endpoint -> success", {
             count: allBookings.length,
         });
 
         return allBookings;
     } catch (error) {
-        logger.error("Bookings: getAll -> failure", error);
+        logger.error("Bookings: getAllBookings endpoint -> failure", error);
 
         throw new InternalServerError(
             "Something went wrong while getting all the bookings",
@@ -51,37 +200,34 @@ const getAll = async () => {
 };
 
 // get a single booking entry by id
-const getById = async (id: number) => {
+const getBookingById = async (id: number) => {
     try {
-        const booking = await db
+        const [booking] = await db
             .select()
             .from(bookings)
             .where(
                 eq(bookings.id, id)
             );
 
-        if (!booking.length) {
-            logger.error("Bookings: getById -> failure", {
+        if (!booking) {
+            logger.error("Bookings: getBookingById endpoint -> failure", {
                 id,
                 error: "Booking not found",
             });
 
             throw new NotFoundError("Booking not found");
         } else {
-            logger.info("Bookings: getById -> success", {
-                id: booking[0],
-            });
+            logger.info("Bookings: getBookingById endpoint -> success", booking);
 
-            return booking[0];
+            return booking;
         }
     } catch (error) {
-
         if (error instanceof NotFoundError) {
             throw error;
         }
 
         else {
-            logger.error("Bookings: getById -> failure", error);
+            logger.error("Bookings: getBookingById endpoint -> failure", error);
 
             throw new InternalServerError(
                 "Something went wrong while getting the booking by id",
@@ -92,9 +238,9 @@ const getById = async (id: number) => {
 };
 
 // remove booking entry by id
-const remove = async (id: number) => {
+const removeBookingById = async (id: number) => {
     try {
-        const deletedBooking = await db
+        const [result] = await db
             .delete(bookings)
             .where(
                 eq(
@@ -102,8 +248,8 @@ const remove = async (id: number) => {
                 )
             );
 
-        if (!deletedBooking[0].affectedRows) {
-            logger.error("Bookings: remove -> failure", {
+        if (result.affectedRows === 0) {
+            logger.error("Bookings: removeBookingById endpoint -> failure", {
                 id,
                 error: "Booking not found",
             });
@@ -111,7 +257,7 @@ const remove = async (id: number) => {
             throw new NotFoundError("Booking not found");
         }
 
-        logger.info("Bookings: remove -> success", {
+        logger.info("Bookings: removeBookingById endpoint -> success", {
             id,
         });
     } catch (error) {
@@ -120,7 +266,7 @@ const remove = async (id: number) => {
         }
 
         else {
-            logger.error("Bookings: remove -> failure", error);
+            logger.error("Bookings: removeBookingById endpoint -> failure", error);
 
             throw new InternalServerError(
                 "Something went wrong while removing the booking",
@@ -131,18 +277,17 @@ const remove = async (id: number) => {
 };
 
 // update a single booking entry
-const update = async (id: number, bookingData: UpdateBookingDto) => {
+const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
     try {
-
-        const updatedBooking= await db
+        const [result]= await db
             .update(bookings)
             .set(bookingData)
             .where(
                 eq(bookings.id, id)
             );
 
-        if (!updatedBooking[0].affectedRows) {
-            logger.error("Bookings: update -> failure", {
+        if (result.affectedRows === 0) {
+            logger.error("Bookings: updateBooking endpoint -> failure", {
                 id,
                 error: "Booking not found",
             });
@@ -150,7 +295,7 @@ const update = async (id: number, bookingData: UpdateBookingDto) => {
             throw new NotFoundError("Booking not found");
         }
 
-        logger.info("Bookings: update -> success", {
+        logger.info("Bookings: updateBooking endpoint -> success", {
             id,
         });
     } catch (error) {
@@ -159,7 +304,7 @@ const update = async (id: number, bookingData: UpdateBookingDto) => {
         }
 
         else {
-            logger.error("Bookings: update -> failure", error);
+            logger.error("Bookings: updateBooking endpoint -> failure", error);
 
             throw new InternalServerError(
                 "Something went wrong while updating the booking",
@@ -169,4 +314,4 @@ const update = async (id: number, bookingData: UpdateBookingDto) => {
     }
 };
 
-export { create, getAll, getById, remove, update };
+export { createBooking, finalizeBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };

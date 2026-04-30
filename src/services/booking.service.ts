@@ -1,27 +1,39 @@
 import type { CreateBookingDto, UpdateBookingDto } from "../dtos/booking.dto.ts"
 import * as bookingRepository from "../repositories/booking.repository.ts";
 
-const create = async (bookingData: CreateBookingDto) => {
-    const booking = await bookingRepository.create(bookingData);
+const createBooking = async (bookingData: CreateBookingDto) => {
+    const booking = await bookingRepository.createBooking(bookingData);
     return booking;
 };
 
-const getAll = async () => {
-    const bookings = await bookingRepository.getAll();
+const finalizeBooking = async (idempotencyKey: string) => {
+    await bookingRepository.finalizeBooking(idempotencyKey);
+};
+
+const confirmBookingStatus = async (id: number) => {
+    await bookingRepository.confirmBookingStatus(id);
+};
+
+const cancelBookingStatus = async (id: number) => {
+    await bookingRepository.cancelBookingStatus(id);
+};
+
+const getAllBookings = async () => {
+    const bookings = await bookingRepository.getAllBookings();
     return bookings;
 };
 
-const getById = async (id: number) => {
-    const booking = await bookingRepository.getById(id);
+const getBookingById = async (id: number) => {
+    const booking = await bookingRepository.getBookingById(id);
     return booking;
 };
 
-const remove = async (id: number) => {
-    await bookingRepository.remove(id);
+const removeBookingById = async (id: number) => {
+    await bookingRepository.removeBookingById(id);
 };
 
-const update = async (id: number, bookingData: UpdateBookingDto) => {
-    await bookingRepository.update(id, bookingData);
+const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
+    await bookingRepository.updateBooking(id, bookingData);
 };
 
-export { create, getAll, getById, remove, update };
+export { createBooking, finalizeBooking, confirmBookingStatus, cancelBookingStatus, getAllBookings, getBookingById, removeBookingById, updateBooking };
