@@ -6,12 +6,14 @@ import type {
 import {
 	BadRequestError,
 	InternalServerError,
-	NotFoundError,
+	NotFoundError, ResourceLockedError,
 } from "../utils/errors/app.error.ts";
 import { db } from "../db/index.ts";
 import { bookings } from "../db/schemas/bookings.ts";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { redlock } from "../config/redlock.config.ts";
+import { serverConfig } from "../config/index.ts";
 
 // create a booking
 const createBooking = async (bookingData: CreateBookingDto) => {
@@ -19,24 +21,47 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 		// generate an idempotency key
 		const idempotencyKey = uuidv4();
 
-		const [newBooking] = await db
-			.insert(bookings)
-			.values({
-				...bookingData,
-				idempotencyKey,
-			})
-			.$returningId();
+		// create the lock
+		const lock = `lock:hotels:${bookingData.hotelId}`;
 
-		logger.info("Bookings: createBooking endpoint -> success", {
-			...newBooking,
-			idempotencyKey,
-		});
+		await redlock.acquire(
+			[lock],
+			serverConfig.REDIS_LOCK_TTL,
+			async (signal) => {
+				if (signal.aborted) {
+					throw signal.error;
+				}
 
-		return {
-			...newBooking,
-			idempotencyKey,
-		};
+				const [newBooking] = await db
+					.insert(bookings)
+					.values({
+						...bookingData,
+						idempotencyKey,
+					})
+					.$returningId();
+
+				logger.info("Bookings: createBooking endpoint -> success", {
+					...newBooking,
+					idempotencyKey,
+				});
+
+				return {
+					...newBooking,
+					idempotencyKey,
+				};
+			},
+		);
 	} catch (error) {
+		// the hotel resource is already locked
+		if(error instanceof Error && error.name === "ExecutionError") {
+			logger.error("Bookings: createBooking endpoint -> failure", error);
+
+			throw new ResourceLockedError(
+				"The hotel is currently being booked by someone else, please try again later.",
+				error.stack,
+			);
+		}
+
 		logger.error("Bookings: createBooking endpoint -> failure", error);
 
 		throw new InternalServerError(
