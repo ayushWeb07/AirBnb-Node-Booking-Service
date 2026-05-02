@@ -6,7 +6,8 @@ import type {
 import {
 	BadRequestError,
 	InternalServerError,
-	NotFoundError, ResourceLockedError,
+	NotFoundError,
+	ResourceLockedError,
 } from "../utils/errors/app.error.ts";
 import { db } from "../db/index.ts";
 import { bookings } from "../db/schemas/bookings.ts";
@@ -53,7 +54,7 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 		);
 	} catch (error) {
 		// the hotel resource is already locked
-		if(error instanceof Error && error.name === "ExecutionError") {
+		if (error instanceof Error && error.name === "ExecutionError") {
 			logger.error("Bookings: createBooking endpoint -> failure", error);
 
 			throw new ResourceLockedError(
