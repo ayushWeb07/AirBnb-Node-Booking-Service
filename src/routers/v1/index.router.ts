@@ -1,9 +1,9 @@
-import { Router } from "express"
-import bookingsRouter from "./bookings.router.ts"
+import { Router } from "express";
+import bookingsRouter from "./bookings.router.ts";
 
-const router= Router()
+const router = Router();
 
 // setup all app routes
-router.use("/bookings", bookingsRouter)
+router.use("/bookings", bookingsRouter);
 
-export default router
+export default router;

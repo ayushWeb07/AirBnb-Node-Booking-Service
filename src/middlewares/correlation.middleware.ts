@@ -4,15 +4,15 @@ import { asyncLocalStorage } from "../utils/helpers/request.helper.ts";
 
 // attach the correlation id
 const attachCorrelationId = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
+	req: Request,
+	res: Response,
+	next: NextFunction,
 ) => {
-  const correlationId = uuidv4();
+	const correlationId = uuidv4();
 
-  asyncLocalStorage.run({ correlationId }, () => {
-    next();
-  });
+	asyncLocalStorage.run({ correlationId }, () => {
+		next();
+	});
 };
 
 export { attachCorrelationId };
