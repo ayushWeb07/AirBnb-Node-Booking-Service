@@ -53,14 +53,14 @@ const finalizeBooking = async (idempotencyKey: string) => {
         if (!booking) {
             logger.error("Bookings: finalizeBooking endpoint -> failure", {
                 idempotencyKey,
-                error: "Booking not found with such idempotencyKey",
+                error: "No booking associated with such idempotencyKey",
             });
 
-            throw new NotFoundError("Booking not found with such idempotencyKey");
+            throw new NotFoundError("No booking associated with such idempotencyKey");
         }
 
         else {
-            // check the booking status and throw error if its not pending
+            // check the booking status and throw error if its either confirmed / canceled
             if(booking.status !== "pending") {
                 logger.info("Bookings: finalizeBooking endpoint -> failure", {
                     id: booking.id,
