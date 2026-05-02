@@ -8,7 +8,10 @@
     "dev": "nodemon src/index.ts",
     "start": "ts-node src/index.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "biome:format": "biome format --write",
+    "biome:lint": "biome lint --write",
+    "biome:check": "biome check --write"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +32,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.14",
     "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",
     "drizzle-kit": "^0.31.10",

@@ -2,15 +2,15 @@ import { Router } from "express";
 import * as users from "../../controllers/users.controller.ts";
 
 import {
-  validateRequestBody,
-  validateRequestUrlParams,
+	validateRequestBody,
+	validateRequestUrlParams,
 } from "../../validators/index.ts";
 
 import {
-  createSchema,
-  getOneSchema,
-  removeSchema,
-  updateSchema,
+	createSchema,
+	getOneSchema,
+	removeSchema,
+	updateSchema,
 } from "../../validators/users.validator.ts";
 
 const router = Router();
