@@ -22,16 +22,6 @@ export class InternalServerError extends AppError {
 	}
 }
 
-export class ResourceLockedError extends AppError {
-	constructor(message: string, stack?: string) {
-		super(StatusCodes.FORBIDDEN, message, "ResourceLockedError");
-
-		if (stack) {
-			this.stack = stack;
-		}
-	}
-}
-
 export class BadRequestError extends AppError {
 	constructor(message: string, stack?: string) {
 		super(StatusCodes.BAD_REQUEST, message, "BadRequestError");
