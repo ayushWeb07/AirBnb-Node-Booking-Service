@@ -6,7 +6,8 @@ interface ServerConfig {
 	LOGTAIL_SOURCE_TOKEN: string;
 	LOGTAIL_URL: string;
 	SENTRY_DSN: string;
-	REDIS_SERVER_URL: string;
+	REDIS_SERVER_HOST: string;
+	REDIS_SERVER_PORT: number;
 	REDIS_LOCK_TTL: number;
 }
 
@@ -20,7 +21,8 @@ const serverConfig: ServerConfig = {
 	LOGTAIL_SOURCE_TOKEN: process.env.LOGTAIL_SOURCE_TOKEN || "",
 	LOGTAIL_URL: process.env.LOGTAIL_URL || "",
 	SENTRY_DSN: process.env.SENTRY_DSN || "",
-	REDIS_SERVER_URL: process.env.REDIS_SERVER_URL || "redis://localhost:6379",
+	REDIS_SERVER_HOST: process.env.REDIS_SERVER_HOST || "localhost",
+	REDIS_SERVER_PORT: Number(process.env.REDIS_SERVER_PORT) || 6379,
 	REDIS_LOCK_TTL: Number(process.env.REDIS_LOCK_TTL) || 1000,
 };
 

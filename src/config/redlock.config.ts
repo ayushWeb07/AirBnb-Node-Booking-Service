@@ -3,7 +3,11 @@ import Redis from "ioredis";
 import Redlock from "redlock";
 
 // create the redis client
-const redis = new Redis(serverConfig.REDIS_SERVER_URL);
+const redis = new Redis({
+	port: serverConfig.REDIS_SERVER_PORT,
+	host: serverConfig.REDIS_SERVER_HOST,
+	maxRetriesPerRequest: null
+});
 
 const redlock = new Redlock([redis], {
 	driftFactor: 0.01,
