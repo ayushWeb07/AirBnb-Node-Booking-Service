@@ -6,7 +6,6 @@ import Redlock from "redlock";
 const redis = new Redis({
 	port: serverConfig.REDIS_SERVER_PORT,
 	host: serverConfig.REDIS_SERVER_HOST,
-	maxRetriesPerRequest: null,
 });
 
 const redlock = new Redlock([redis], {
