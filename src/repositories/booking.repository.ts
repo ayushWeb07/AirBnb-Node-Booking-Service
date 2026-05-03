@@ -5,6 +5,7 @@ import type {
 } from "../dtos/booking.dto.ts";
 import {
 	BadRequestError,
+	ForbiddenError,
 	InternalServerError,
 	NotFoundError,
 } from "../utils/errors/app.error.ts";
@@ -12,12 +13,19 @@ import { db } from "../db/index.ts";
 import { bookings } from "../db/schemas/bookings.ts";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { redlock } from "../config/redlock.config.ts";
+import { serverConfig } from "../config/index.ts";
+import { ResourceLockedError, ExecutionError } from "redlock";
 
 // create a booking
 const createBooking = async (bookingData: CreateBookingDto) => {
 	try {
 		// generate an idempotency key
 		const idempotencyKey = uuidv4();
+
+		// create and acquire the lock
+		const lock = `lock:hotels:${bookingData.hotelId}`;
+		await redlock.acquire([lock], serverConfig.REDIS_LOCK_TTL);
 
 		const [newBooking] = await db
 			.insert(bookings)
@@ -37,6 +45,19 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 			idempotencyKey,
 		};
 	} catch (error) {
+		// the hotel resource is already locked
+		if (
+			error instanceof ResourceLockedError ||
+			error instanceof ExecutionError
+		) {
+			logger.error("Bookings: createBooking endpoint -> failure", error);
+
+			throw new ForbiddenError(
+				"The hotel is currently being booked by someone else, please try again later.",
+				error.stack,
+			);
+		}
+
 		logger.error("Bookings: createBooking endpoint -> failure", error);
 
 		throw new InternalServerError(
