@@ -15,7 +15,7 @@ import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { redlock } from "../config/redlock.config.ts";
 import { serverConfig } from "../config/index.ts";
-import { ResourceLockedError } from "redlock";
+import { ResourceLockedError, ExecutionError } from "redlock";
 
 // create a booking
 const createBooking = async (bookingData: CreateBookingDto) => {
@@ -23,39 +23,33 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 		// generate an idempotency key
 		const idempotencyKey = uuidv4();
 
-		// create the lock
+		// create and acquire the lock
 		const lock = `lock:hotels:${bookingData.hotelId}`;
+		await redlock.acquire([lock], serverConfig.REDIS_LOCK_TTL);
 
-		return await redlock.using(
-			[lock],
-			serverConfig.REDIS_LOCK_TTL,
-			async (signal) => {
-				if (signal.aborted) {
-					throw signal.error;
-				}
+		const [newBooking] = await db
+			.insert(bookings)
+			.values({
+				...bookingData,
+				idempotencyKey,
+			})
+			.$returningId();
 
-				const [newBooking] = await db
-					.insert(bookings)
-					.values({
-						...bookingData,
-						idempotencyKey,
-					})
-					.$returningId();
+		logger.info("Bookings: createBooking endpoint -> success", {
+			...newBooking,
+			idempotencyKey,
+		});
 
-				logger.info("Bookings: createBooking endpoint -> success", {
-					...newBooking,
-					idempotencyKey,
-				});
-
-				return {
-					...newBooking,
-					idempotencyKey,
-				};
-			},
-		);
+		return {
+			...newBooking,
+			idempotencyKey,
+		};
 	} catch (error) {
 		// the hotel resource is already locked
-		if (error instanceof ResourceLockedError) {
+		if (
+			error instanceof ResourceLockedError ||
+			error instanceof ExecutionError
+		) {
 			logger.error("Bookings: createBooking endpoint -> failure", error);
 
 			throw new ForbiddenError(
