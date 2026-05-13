@@ -13,12 +13,12 @@ const startServer = async (app: Express) => {
 
 			// add an email notification to the queue
 			const email: AddEmailDto = {
-				toMailAddress: "john@gmail.com",
-				subject: "Thanks for purchase",
-				templateId: "temp-101",
+				toMailAddress: "bommanaayush07@gmail.com",
+				subject: "Welcome",
+				templateId: "welcome",
 				params: {
-					userName: "johnDoe",
-					userId: "user-909",
+					name: "Ayush",
+					app_name: "AirBnb",
 				},
 			};
 
