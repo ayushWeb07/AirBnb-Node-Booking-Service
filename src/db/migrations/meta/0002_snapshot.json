@@ -1,123 +1,119 @@
 {
-  "version": "5",
-  "dialect": "mysql",
-  "id": "34161448-2e2e-4818-bec9-c81ad410f563",
-  "prevId": "4c9701dc-2cc5-4487-ab0a-b3b75adfe455",
-  "tables": {
-    "bookings": {
-      "name": "bookings",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "userId": {
-          "name": "userId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "hotelId": {
-          "name": "hotelId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "roomTypeId": {
-          "name": "roomTypeId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "bookingAmount": {
-          "name": "bookingAmount",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "totalGuests": {
-          "name": "totalGuests",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "totalRooms": {
-          "name": "totalRooms",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "enum('pending','confirmed','cancelled')",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'pending'"
-        },
-        "idempotencyKey": {
-          "name": "idempotencyKey",
-          "type": "varchar(36)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(now())"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "onUpdate": true,
-          "default": "(now())"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "bookings_id": {
-          "name": "bookings_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "bookings_idempotencyKey_unique": {
-          "name": "bookings_idempotencyKey_unique",
-          "columns": [
-            "idempotencyKey"
-          ]
-        }
-      },
-      "checkConstraint": {}
-    }
-  },
-  "views": {},
-  "_meta": {
-    "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "internal": {
-    "tables": {},
-    "indexes": {}
-  }
+	"version": "5",
+	"dialect": "mysql",
+	"id": "34161448-2e2e-4818-bec9-c81ad410f563",
+	"prevId": "4c9701dc-2cc5-4487-ab0a-b3b75adfe455",
+	"tables": {
+		"bookings": {
+			"name": "bookings",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"userId": {
+					"name": "userId",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"hotelId": {
+					"name": "hotelId",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"roomTypeId": {
+					"name": "roomTypeId",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"bookingAmount": {
+					"name": "bookingAmount",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"totalGuests": {
+					"name": "totalGuests",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"totalRooms": {
+					"name": "totalRooms",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"status": {
+					"name": "status",
+					"type": "enum('pending','confirmed','cancelled')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'pending'"
+				},
+				"idempotencyKey": {
+					"name": "idempotencyKey",
+					"type": "varchar(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"bookings_id": {
+					"name": "bookings_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {
+				"bookings_idempotencyKey_unique": {
+					"name": "bookings_idempotencyKey_unique",
+					"columns": ["idempotencyKey"]
+				}
+			},
+			"checkConstraint": {}
+		}
+	},
+	"views": {},
+	"_meta": {
+		"schemas": {},
+		"tables": {},
+		"columns": {}
+	},
+	"internal": {
+		"tables": {},
+		"indexes": {}
+	}
 }

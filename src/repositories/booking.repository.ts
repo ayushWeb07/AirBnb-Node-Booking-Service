@@ -71,7 +71,9 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 
 		// check if the room type even exists
 		const roomTypesUrl =
-			serverConfig.HOTEL_SERVICE_BASE_URL + "/room-types/" + bookingData.roomTypeId;
+			serverConfig.HOTEL_SERVICE_BASE_URL +
+			"/room-types/" +
+			bookingData.roomTypeId;
 
 		response = await fetch(roomTypesUrl);
 		const roomTypeRes = await response.json();
@@ -95,7 +97,7 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 		}
 
 		// check if the hotelId mentioned in the roomType, matches the user sent hotelId
-		if(roomTypeRes.data.hotelId !== bookingData.hotelId) {
+		if (roomTypeRes.data.hotelId !== bookingData.hotelId) {
 			logger.error("Bookings: createBooking endpoint -> failure", {
 				error: "Invalid room type has been provided for the specific hotel",
 			});
@@ -426,7 +428,9 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
 		// check if the room type even exists
 		if (bookingData.roomTypeId) {
 			const roomTypesUrl =
-				serverConfig.HOTEL_SERVICE_BASE_URL + "/room-types/" + bookingData.roomTypeId;
+				serverConfig.HOTEL_SERVICE_BASE_URL +
+				"/room-types/" +
+				bookingData.roomTypeId;
 
 			const response = await fetch(roomTypesUrl);
 			const roomTypeRes = await response.json();
@@ -450,7 +454,7 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
 			}
 
 			// check if the hotelId mentioned in the roomType, matches the user sent hotelId
-			if(roomTypeRes.data.hotelId !== bookingData.hotelId) {
+			if (roomTypeRes.data.hotelId !== bookingData.hotelId) {
 				logger.error("Bookings: updateBooking endpoint -> failure", {
 					error: "Invalid room type has been provided for the specific hotel",
 				});
