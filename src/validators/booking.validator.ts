@@ -3,8 +3,10 @@ import z from "zod";
 const createBookingSchema = z.object({
 	userId: z.number().nonnegative(),
 	hotelId: z.number().nonnegative(),
+	roomTypeId: z.number().nonnegative(),
 	bookingAmount: z.number().gt(0),
 	totalGuests: z.number().gt(0),
+	totalRooms: z.number().gt(0),
 });
 
 const getBookingByIdSchema = z.object({
@@ -18,8 +20,10 @@ const removeBookingByIdSchema = z.object({
 const updateBookingBodySchema = z.object({
 	userId: z.number().nonnegative().optional(),
 	hotelId: z.number().nonnegative().optional(),
+	roomTypeId: z.number().nonnegative().optional(),
 	bookingAmount: z.number().gt(0).optional(),
 	totalGuests: z.number().gt(0).optional(),
+	totalRooms: z.number().gt(0).optional(),
 });
 
 const updateBookingUrlParamsSchema = z.object({

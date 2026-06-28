@@ -69,6 +69,42 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 			);
 		}
 
+		// check if the room type even exists
+		const roomTypesUrl =
+			serverConfig.HOTEL_SERVICE_BASE_URL + "/room-types/" + bookingData.roomTypeId;
+
+		response = await fetch(roomTypesUrl);
+		const roomTypeRes = await response.json();
+
+		if (response.status === StatusCodes.NOT_FOUND) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				roomTypeId: bookingData.roomTypeId,
+				error: "Room type not found",
+			});
+
+			throw new NotFoundError("Room type not found");
+		} else if (response.status !== StatusCodes.OK) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				roomTypeId: bookingData.roomTypeId,
+				error: "Something went wrong while checking if the room type exists",
+			});
+
+			throw new InternalServerError(
+				"Something went wrong while checking if the room type exists",
+			);
+		}
+
+		// check if the hotelId mentioned in the roomType, matches the user sent hotelId
+		if(roomTypeRes.data.hotelId !== bookingData.hotelId) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "Invalid room type has been provided for the specific hotel",
+			});
+
+			throw new BadRequestError(
+				"Invalid room type has been provided for the specific hotel",
+			);
+		}
+
 		// generate an idempotency key
 		const idempotencyKey = uuidv4();
 
@@ -107,7 +143,8 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 			);
 		} else if (
 			error instanceof NotFoundError ||
-			error instanceof InternalServerError
+			error instanceof InternalServerError ||
+			error instanceof BadRequestError
 		) {
 			throw error;
 		} else {
@@ -386,6 +423,44 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
 			}
 		}
 
+		// check if the room type even exists
+		if (bookingData.roomTypeId) {
+			const roomTypesUrl =
+				serverConfig.HOTEL_SERVICE_BASE_URL + "/room-types/" + bookingData.roomTypeId;
+
+			const response = await fetch(roomTypesUrl);
+			const roomTypeRes = await response.json();
+
+			if (response.status === StatusCodes.NOT_FOUND) {
+				logger.error("Bookings: updateBooking endpoint -> failure", {
+					roomTypeId: bookingData.roomTypeId,
+					error: "Room type not found",
+				});
+
+				throw new NotFoundError("Room type not found");
+			} else if (response.status !== StatusCodes.OK) {
+				logger.error("Bookings: updateBooking endpoint -> failure", {
+					roomTypeId: bookingData.roomTypeId,
+					error: "Something went wrong while checking if the room type exists",
+				});
+
+				throw new InternalServerError(
+					"Something went wrong while checking if the room type exists",
+				);
+			}
+
+			// check if the hotelId mentioned in the roomType, matches the user sent hotelId
+			if(roomTypeRes.data.hotelId !== bookingData.hotelId) {
+				logger.error("Bookings: updateBooking endpoint -> failure", {
+					error: "Invalid room type has been provided for the specific hotel",
+				});
+
+				throw new BadRequestError(
+					"Invalid room type has been provided for the specific hotel",
+				);
+			}
+		}
+
 		const [result] = await db
 			.update(bookings)
 			.set(bookingData)
@@ -406,6 +481,7 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
 	} catch (error) {
 		if (
 			error instanceof NotFoundError ||
+			error instanceof BadRequestError ||
 			error instanceof InternalServerError
 		) {
 			throw error;
