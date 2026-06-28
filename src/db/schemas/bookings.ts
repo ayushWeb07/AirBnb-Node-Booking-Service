@@ -10,8 +10,10 @@ export const bookings = mysqlTable("bookings", {
 	id: int("id").primaryKey().autoincrement(),
 	userId: int("userId").notNull(),
 	hotelId: int("hotelId").notNull(),
+	roomTypeId: int("roomTypeId").notNull(),
 	bookingAmount: int("bookingAmount").notNull(),
 	totalGuests: int("totalGuests").notNull(),
+	totalRooms: int("totalRooms").notNull(),
 	status: mysqlEnum("status", ["pending", "confirmed", "cancelled"])
 		.notNull()
 		.default("pending"),
