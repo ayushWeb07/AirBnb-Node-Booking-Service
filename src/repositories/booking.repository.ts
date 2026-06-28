@@ -16,10 +16,59 @@ import { v4 as uuidv4 } from "uuid";
 import { redlock } from "../config/redlock.config.ts";
 import { serverConfig } from "../config/index.ts";
 import { ResourceLockedError, ExecutionError } from "redlock";
+import { StatusCodes } from "http-status-codes";
 
 // create a booking
 const createBooking = async (bookingData: CreateBookingDto) => {
 	try {
+		// check if the user even exists
+		const apiGatewayUrl =
+			serverConfig.API_GATEWAY_BASE_URL + "/users/" + bookingData.userId;
+
+		let response = await fetch(apiGatewayUrl);
+
+		if (response.status === StatusCodes.NOT_FOUND) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				userId: bookingData.userId,
+				error: "User not found",
+			});
+
+			throw new NotFoundError("User not found");
+		} else if (response.status !== StatusCodes.OK) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				userId: bookingData.userId,
+				error: "Something went wrong while checking if the user exists",
+			});
+
+			throw new InternalServerError(
+				"Something went wrong while checking if the user exists",
+			);
+		}
+
+		// check if the hotel even exists
+		const hotelServiceUrl =
+			serverConfig.HOTEL_SERVICE_BASE_URL + "/hotels/" + bookingData.hotelId;
+
+		response = await fetch(hotelServiceUrl);
+
+		if (response.status === StatusCodes.NOT_FOUND) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				hotelId: bookingData.hotelId,
+				error: "Hotel not found",
+			});
+
+			throw new NotFoundError("Hotel not found");
+		} else if (response.status !== StatusCodes.OK) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				hotelId: bookingData.hotelId,
+				error: "Something went wrong while checking if the hotel exists",
+			});
+
+			throw new InternalServerError(
+				"Something went wrong while checking if the hotel exists",
+			);
+		}
+
 		// generate an idempotency key
 		const idempotencyKey = uuidv4();
 
@@ -56,14 +105,19 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 				"The hotel is currently being booked by someone else, please try again later.",
 				error.stack,
 			);
+		} else if (
+			error instanceof NotFoundError ||
+			error instanceof InternalServerError
+		) {
+			throw error;
+		} else {
+			logger.error("Bookings: createBooking endpoint -> failure", error);
+
+			throw new InternalServerError(
+				"Something went wrong while creating a new booking",
+				error instanceof Error ? error.stack : undefined,
+			);
 		}
-
-		logger.error("Bookings: createBooking endpoint -> failure", error);
-
-		throw new InternalServerError(
-			"Something went wrong while creating a new booking",
-			error instanceof Error ? error.stack : undefined,
-		);
 	}
 };
 
@@ -280,6 +334,58 @@ const removeBookingById = async (id: number) => {
 // update a single booking entry
 const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
 	try {
+		// check if the user even exists
+		if (bookingData.userId) {
+			const apiGatewayUrl =
+				serverConfig.API_GATEWAY_BASE_URL + "/users/" + bookingData.userId;
+
+			const response = await fetch(apiGatewayUrl);
+
+			if (response.status === StatusCodes.NOT_FOUND) {
+				logger.error("Bookings: createBooking endpoint -> failure", {
+					userId: bookingData.userId,
+					error: "User not found",
+				});
+
+				throw new NotFoundError("User not found");
+			} else if (response.status !== StatusCodes.OK) {
+				logger.error("Bookings: createBooking endpoint -> failure", {
+					userId: bookingData.userId,
+					error: "Something went wrong while checking if the user exists",
+				});
+
+				throw new InternalServerError(
+					"Something went wrong while checking if the user exists",
+				);
+			}
+		}
+
+		// check if the hotel even exists
+		if (bookingData.hotelId) {
+			const hotelServiceUrl =
+				serverConfig.HOTEL_SERVICE_BASE_URL + "/hotels/" + bookingData.hotelId;
+
+			const response = await fetch(hotelServiceUrl);
+
+			if (response.status === StatusCodes.NOT_FOUND) {
+				logger.error("Bookings: createBooking endpoint -> failure", {
+					hotelId: bookingData.hotelId,
+					error: "Hotel not found",
+				});
+
+				throw new NotFoundError("Hotel not found");
+			} else if (response.status !== StatusCodes.OK) {
+				logger.error("Bookings: createBooking endpoint -> failure", {
+					hotelId: bookingData.hotelId,
+					error: "Something went wrong while checking if the hotel exists",
+				});
+
+				throw new InternalServerError(
+					"Something went wrong while checking if the hotel exists",
+				);
+			}
+		}
+
 		const [result] = await db
 			.update(bookings)
 			.set(bookingData)
@@ -298,7 +404,10 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
 			id,
 		});
 	} catch (error) {
-		if (error instanceof NotFoundError) {
+		if (
+			error instanceof NotFoundError ||
+			error instanceof InternalServerError
+		) {
 			throw error;
 		} else {
 			logger.error("Bookings: updateBooking endpoint -> failure", error);

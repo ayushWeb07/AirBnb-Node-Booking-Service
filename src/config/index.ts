@@ -13,6 +13,8 @@ interface ServerConfig {
 	BULLMQ_MAILER_PAYLOAD_NAME: string;
 	BULLMQ_MAILER_ADD_EMAIL_ATTEMPTS: number;
 	BULLMQ_MAILER_ADD_EMAIL_DELAY: number;
+	HOTEL_SERVICE_BASE_URL: string;
+	API_GATEWAY_BASE_URL: string;
 }
 
 interface DbConfig {
@@ -36,6 +38,8 @@ const serverConfig: ServerConfig = {
 		Number(process.env.BULLMQ_MAILER_ADD_EMAIL_ATTEMPTS) || 3,
 	BULLMQ_MAILER_ADD_EMAIL_DELAY:
 		Number(process.env.BULLMQ_MAILER_ADD_EMAIL_DELAY) || 1000,
+	HOTEL_SERVICE_BASE_URL: process.env.HOTEL_SERVICE_BASE_URL || "",
+	API_GATEWAY_BASE_URL: process.env.API_GATEWAY_BASE_URL || "",
 };
 
 const dbConfig: DbConfig = {
