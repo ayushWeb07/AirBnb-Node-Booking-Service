@@ -97,7 +97,7 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 		}
 
 		// check if the hotelId mentioned in the roomType, matches the user sent hotelId
-		if (roomTypeRes.data.hotelId !== bookingData.hotelId) {
+		if (roomTypeRes["data"]["hotelId"] !== bookingData.hotelId) {
 			logger.error("Bookings: createBooking endpoint -> failure", {
 				error: "Invalid room type has been provided for the specific hotel",
 			});
@@ -107,17 +107,110 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 			);
 		}
 
+		// check if the room type has so many rooms as required
+		if(bookingData.totalRooms > roomTypeRes["data"]["roomCount"]) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "The specific room type does not have so many rooms",
+			});
+
+			throw new ForbiddenError(
+				"The specific room type does not have so many rooms",
+			);
+		}
+
+		// validate the dates
+		const checkInDate= new Date(bookingData.checkInDate)
+		const checkOutDate= new Date(bookingData.checkOutDate)
+
+		if (checkInDate >= checkOutDate) {
+			logger.error("Bookings: createBooking -> failure", {
+				error: "Check-in date must be prior to check-out date",
+			});
+
+			throw new BadRequestError("Check-in date must be prior to check-out date");
+		}
+
+		// check if checkInDate is in future
+		if (checkInDate < new Date()) {
+			logger.error("Bookings: createBooking -> failure", {
+				error: "Check-in date must be in future",
+			});
+
+			throw new BadRequestError("Check-in date must be in future");
+		}
+
+		// check if the rooms are available for the date ranges
+		const roomsAvailabilityUrl =
+			serverConfig.HOTEL_SERVICE_BASE_URL +
+			"/rooms/check-available";
+
+		response = await fetch(roomsAvailabilityUrl, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				roomTypeId: bookingData.roomTypeId,
+				startDate: bookingData.checkInDate,
+				endDate: bookingData.checkOutDate
+			})
+		});
+
+		const availableRoomsRes = await response.json();
+
+		if (response.status === StatusCodes.NOT_FOUND) {
+			logger.error("Rooms: createBooking -> failure", {
+				roomTypeId: bookingData.roomTypeId,
+				error: "Room type not found",
+			});
+
+			throw new NotFoundError("Room type not found");
+		} else if (response.status !== StatusCodes.OK) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "Something went wrong while fetching the available rooms",
+			});
+
+			throw new InternalServerError(
+				"Something went wrong while fetching the available rooms",
+			);
+		}
+
+		// calculate the days
+		const totalNights = Math.ceil(
+			(checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24),
+		);
+
+		// check if so many rooms are available
+		const totalAvailableRooms= availableRoomsRes["data"].length
+		const totalRequiredRooms= totalNights * bookingData.totalRooms
+
+		if(totalRequiredRooms > totalAvailableRooms) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "Insufficient available rooms to fulfil your booking",
+			});
+
+			throw new ForbiddenError("Insufficient available rooms to fulfil your booking");
+		}
+
 		// generate an idempotency key
 		const idempotencyKey = uuidv4();
 
 		// create and acquire the lock
-		const lock = `lock:hotels:${bookingData.hotelId}`;
+		const lock = `lock:hotelId-${bookingData.hotelId}|roomTypeId-${bookingData.roomTypeId}`;
 		await redlock.acquire([lock], serverConfig.REDIS_LOCK_TTL);
 
 		const [newBooking] = await db
 			.insert(bookings)
 			.values({
-				...bookingData,
+				userId: bookingData.userId,
+				hotelId: bookingData.hotelId,
+				roomTypeId: bookingData.roomTypeId,
+				bookingAmount: bookingData.bookingAmount,
+				totalGuests: bookingData.totalGuests,
+				totalRooms: bookingData.totalRooms,
+				checkInDate,
+				checkOutDate,
+				totalNights,
 				idempotencyKey,
 			})
 			.$returningId();
@@ -126,6 +219,61 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 			...newBooking,
 			idempotencyKey,
 		});
+
+		// update the booking id on rooms to book them
+		let roomsIdsToBeBooked: number[]= []
+		let c= 0
+		let roomItem= null
+
+		while (c < totalRequiredRooms) {
+			roomItem= availableRoomsRes["data"][c]
+			roomsIdsToBeBooked.push(roomItem["id"])
+			c++
+		}
+
+		const bookRoomsUrl =
+			serverConfig.HOTEL_SERVICE_BASE_URL +
+			"/rooms/book-rooms";
+
+		response = await fetch(bookRoomsUrl, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				bookingId: newBooking.id,
+				roomIds: roomsIdsToBeBooked
+			})
+		});
+
+		const bookRoomsRes = await response.json();
+
+		if (response.status === StatusCodes.NOT_FOUND) {
+			logger.error("Rooms: createBooking -> failure", {
+				roomTypeId: bookingData.roomTypeId,
+				error: "Room type not found",
+			});
+
+			throw new NotFoundError("Room type not found");
+		} else if (response.status !== StatusCodes.OK) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "Something went wrong while fetching the available rooms",
+			});
+
+			throw new InternalServerError(
+				"Something went wrong while fetching the available rooms",
+			);
+		}
+
+		if(bookRoomsRes["data"]["affectedCount"] !== totalRequiredRooms) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "Failed to the book the available rooms",
+			});
+
+			throw new InternalServerError(
+				"Failed to the book the available rooms",
+			);
+		}
 
 		return {
 			...newBooking,
@@ -146,7 +294,8 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 		} else if (
 			error instanceof NotFoundError ||
 			error instanceof InternalServerError ||
-			error instanceof BadRequestError
+			error instanceof BadRequestError ||
+			error instanceof ForbiddenError
 		) {
 			throw error;
 		} else {
@@ -454,7 +603,7 @@ const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
 			}
 
 			// check if the hotelId mentioned in the roomType, matches the user sent hotelId
-			if (roomTypeRes.data.hotelId !== bookingData.hotelId) {
+			if (roomTypeRes["data"]["hotelId"] !== bookingData.hotelId) {
 				logger.error("Bookings: updateBooking endpoint -> failure", {
 					error: "Invalid room type has been provided for the specific hotel",
 				});

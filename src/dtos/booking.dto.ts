@@ -5,6 +5,8 @@ export interface CreateBookingDto {
 	bookingAmount: number;
 	totalGuests: number;
 	totalRooms: number;
+	checkInDate: string;
+	checkOutDate: string;
 }
 
 export interface UpdateBookingDto {
@@ -14,4 +16,6 @@ export interface UpdateBookingDto {
 	bookingAmount?: number;
 	totalGuests?: number;
 	totalRooms?: number;
+	checkInDate?: string;
+	checkOutDate?: string;
 }

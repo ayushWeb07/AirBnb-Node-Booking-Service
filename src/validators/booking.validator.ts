@@ -7,6 +7,8 @@ const createBookingSchema = z.object({
 	bookingAmount: z.number().gt(0),
 	totalGuests: z.number().gt(0),
 	totalRooms: z.number().gt(0),
+	checkInDate: z.iso.datetime(),
+	checkOutDate: z.iso.datetime(),
 });
 
 const getBookingByIdSchema = z.object({
