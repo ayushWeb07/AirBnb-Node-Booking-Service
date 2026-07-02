@@ -1,7 +1,6 @@
 import { logger } from "../config/logger.config.ts";
 import type {
 	CreateBookingDto,
-	UpdateBookingDto,
 } from "../dtos/booking.dto.ts";
 import {
 	BadRequestError,
@@ -519,136 +518,6 @@ const removeBookingById = async (id: number) => {
 	}
 };
 
-// update a single booking entry
-const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
-	try {
-		// check if the user even exists
-		if (bookingData.userId) {
-			const apiGatewayUrl =
-				serverConfig.API_GATEWAY_BASE_URL + "/users/" + bookingData.userId;
-
-			const response = await fetch(apiGatewayUrl);
-
-			if (response.status === StatusCodes.NOT_FOUND) {
-				logger.error("Bookings: createBooking endpoint -> failure", {
-					userId: bookingData.userId,
-					error: "User not found",
-				});
-
-				throw new NotFoundError("User not found");
-			} else if (response.status !== StatusCodes.OK) {
-				logger.error("Bookings: createBooking endpoint -> failure", {
-					userId: bookingData.userId,
-					error: "Something went wrong while checking if the user exists",
-				});
-
-				throw new InternalServerError(
-					"Something went wrong while checking if the user exists",
-				);
-			}
-		}
-
-		// check if the hotel even exists
-		if (bookingData.hotelId) {
-			const hotelServiceUrl =
-				serverConfig.HOTEL_SERVICE_BASE_URL + "/hotels/" + bookingData.hotelId;
-
-			const response = await fetch(hotelServiceUrl);
-
-			if (response.status === StatusCodes.NOT_FOUND) {
-				logger.error("Bookings: createBooking endpoint -> failure", {
-					hotelId: bookingData.hotelId,
-					error: "Hotel not found",
-				});
-
-				throw new NotFoundError("Hotel not found");
-			} else if (response.status !== StatusCodes.OK) {
-				logger.error("Bookings: createBooking endpoint -> failure", {
-					hotelId: bookingData.hotelId,
-					error: "Something went wrong while checking if the hotel exists",
-				});
-
-				throw new InternalServerError(
-					"Something went wrong while checking if the hotel exists",
-				);
-			}
-		}
-
-		// check if the room type even exists
-		if (bookingData.roomTypeId) {
-			const roomTypesUrl =
-				serverConfig.HOTEL_SERVICE_BASE_URL +
-				"/room-types/" +
-				bookingData.roomTypeId;
-
-			const response = await fetch(roomTypesUrl);
-			const roomTypeRes = await response.json();
-
-			if (response.status === StatusCodes.NOT_FOUND) {
-				logger.error("Bookings: updateBooking endpoint -> failure", {
-					roomTypeId: bookingData.roomTypeId,
-					error: "Room type not found",
-				});
-
-				throw new NotFoundError("Room type not found");
-			} else if (response.status !== StatusCodes.OK) {
-				logger.error("Bookings: updateBooking endpoint -> failure", {
-					roomTypeId: bookingData.roomTypeId,
-					error: "Something went wrong while checking if the room type exists",
-				});
-
-				throw new InternalServerError(
-					"Something went wrong while checking if the room type exists",
-				);
-			}
-
-			// check if the hotelId mentioned in the roomType, matches the user sent hotelId
-			if (roomTypeRes["data"]["hotelId"] !== bookingData.hotelId) {
-				logger.error("Bookings: updateBooking endpoint -> failure", {
-					error: "Invalid room type has been provided for the specific hotel",
-				});
-
-				throw new BadRequestError(
-					"Invalid room type has been provided for the specific hotel",
-				);
-			}
-		}
-
-		const [result] = await db
-			.update(bookings)
-			.set(bookingData)
-			.where(eq(bookings.id, id));
-
-		if (result.affectedRows === 0) {
-			logger.error("Bookings: updateBooking endpoint -> failure", {
-				id,
-				error: "Booking not found",
-			});
-
-			throw new NotFoundError("Booking not found");
-		}
-
-		logger.info("Bookings: updateBooking endpoint -> success", {
-			id,
-		});
-	} catch (error) {
-		if (
-			error instanceof NotFoundError ||
-			error instanceof BadRequestError ||
-			error instanceof InternalServerError
-		) {
-			throw error;
-		} else {
-			logger.error("Bookings: updateBooking endpoint -> failure", error);
-
-			throw new InternalServerError(
-				"Something went wrong while updating the booking",
-				error instanceof Error ? error.stack : undefined,
-			);
-		}
-	}
-};
-
 export {
 	createBooking,
 	finalizeBooking,
@@ -657,5 +526,4 @@ export {
 	getAllBookings,
 	getBookingById,
 	removeBookingById,
-	updateBooking,
 };

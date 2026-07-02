@@ -73,16 +73,6 @@ const removeBookingById = async (req: Request, res: Response) => {
 	});
 };
 
-const updateBooking = async (req: Request, res: Response) => {
-	await bookingService.updateBooking(Number(req.params.id), req.body);
-
-	res.status(StatusCodes.OK).json({
-		message: "Updated the booking successfully",
-		data: null,
-		success: true,
-	});
-};
-
 export {
 	createBooking,
 	finalizeBooking,
@@ -91,5 +81,4 @@ export {
 	getAllBookings,
 	getBookingById,
 	removeBookingById,
-	updateBooking,
 };

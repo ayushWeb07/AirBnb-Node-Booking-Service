@@ -19,19 +19,6 @@ const removeBookingByIdSchema = z.object({
 	id: z.coerce.number().nonnegative(),
 });
 
-const updateBookingBodySchema = z.object({
-	userId: z.number().nonnegative().optional(),
-	hotelId: z.number().nonnegative().optional(),
-	roomTypeId: z.number().nonnegative().optional(),
-	bookingAmount: z.number().gt(0).optional(),
-	totalGuests: z.number().gt(0).optional(),
-	totalRooms: z.number().gt(0).optional(),
-});
-
-const updateBookingUrlParamsSchema = z.object({
-	id: z.coerce.number().nonnegative(),
-});
-
 const confirmBookingStatusSchema = z.object({
 	id: z.coerce.number().nonnegative(),
 });
@@ -49,8 +36,6 @@ export {
 	finalizeBookingSchema,
 	getBookingByIdSchema,
 	removeBookingByIdSchema,
-	updateBookingBodySchema,
-	updateBookingUrlParamsSchema,
 	confirmBookingStatusSchema,
 	cancelBookingStatusSchema,
 };

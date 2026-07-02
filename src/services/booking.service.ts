@@ -1,6 +1,5 @@
 import type {
 	CreateBookingDto,
-	UpdateBookingDto,
 } from "../dtos/booking.dto.ts";
 import * as bookingRepository from "../repositories/booking.repository.ts";
 
@@ -35,10 +34,6 @@ const removeBookingById = async (id: number) => {
 	await bookingRepository.removeBookingById(id);
 };
 
-const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
-	await bookingRepository.updateBooking(id, bookingData);
-};
-
 export {
 	createBooking,
 	finalizeBooking,
@@ -47,5 +42,4 @@ export {
 	getAllBookings,
 	getBookingById,
 	removeBookingById,
-	updateBooking,
 };
