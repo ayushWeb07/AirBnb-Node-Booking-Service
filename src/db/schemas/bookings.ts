@@ -14,6 +14,9 @@ export const bookings = mysqlTable("bookings", {
 	bookingAmount: int("bookingAmount").notNull(),
 	totalGuests: int("totalGuests").notNull(),
 	totalRooms: int("totalRooms").notNull(),
+	totalNights: int("totalNights").notNull(),
+	checkInDate: timestamp("checkInDate").notNull().defaultNow(),
+	checkOutDate: timestamp("checkOutDate").notNull().defaultNow(),
 	status: mysqlEnum("status", ["pending", "confirmed", "cancelled"])
 		.notNull()
 		.default("pending"),

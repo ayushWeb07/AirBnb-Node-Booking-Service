@@ -41,11 +41,5 @@ router.delete(
 	validateRequestUrlParams(bookingValidator.removeBookingByIdSchema),
 	bookingsController.removeBookingById,
 );
-router.patch(
-	"/:id",
-	validateRequestUrlParams(bookingValidator.updateBookingUrlParamsSchema),
-	validateRequestBody(bookingValidator.updateBookingBodySchema),
-	bookingsController.updateBooking,
-);
 
 export default router;

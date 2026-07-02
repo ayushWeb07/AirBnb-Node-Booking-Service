@@ -1,7 +1,6 @@
 import { logger } from "../config/logger.config.ts";
 import type {
 	CreateBookingDto,
-	UpdateBookingDto,
 } from "../dtos/booking.dto.ts";
 import {
 	BadRequestError,
@@ -97,7 +96,7 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 		}
 
 		// check if the hotelId mentioned in the roomType, matches the user sent hotelId
-		if (roomTypeRes.data.hotelId !== bookingData.hotelId) {
+		if (roomTypeRes["data"]["hotelId"] !== bookingData.hotelId) {
 			logger.error("Bookings: createBooking endpoint -> failure", {
 				error: "Invalid room type has been provided for the specific hotel",
 			});
@@ -107,17 +106,110 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 			);
 		}
 
+		// check if the room type has so many rooms as required
+		if(bookingData.totalRooms > roomTypeRes["data"]["roomCount"]) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "The specific room type does not have so many rooms",
+			});
+
+			throw new ForbiddenError(
+				"The specific room type does not have so many rooms",
+			);
+		}
+
+		// validate the dates
+		const checkInDate= new Date(bookingData.checkInDate)
+		const checkOutDate= new Date(bookingData.checkOutDate)
+
+		if (checkInDate >= checkOutDate) {
+			logger.error("Bookings: createBooking -> failure", {
+				error: "Check-in date must be prior to check-out date",
+			});
+
+			throw new BadRequestError("Check-in date must be prior to check-out date");
+		}
+
+		// check if checkInDate is in future
+		if (checkInDate < new Date()) {
+			logger.error("Bookings: createBooking -> failure", {
+				error: "Check-in date must be in future",
+			});
+
+			throw new BadRequestError("Check-in date must be in future");
+		}
+
+		// check if the rooms are available for the date ranges
+		const roomsAvailabilityUrl =
+			serverConfig.HOTEL_SERVICE_BASE_URL +
+			"/rooms/check-available";
+
+		response = await fetch(roomsAvailabilityUrl, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				roomTypeId: bookingData.roomTypeId,
+				startDate: bookingData.checkInDate,
+				endDate: bookingData.checkOutDate
+			})
+		});
+
+		const availableRoomsRes = await response.json();
+
+		if (response.status === StatusCodes.NOT_FOUND) {
+			logger.error("Rooms: createBooking -> failure", {
+				roomTypeId: bookingData.roomTypeId,
+				error: "Room type not found",
+			});
+
+			throw new NotFoundError("Room type not found");
+		} else if (response.status !== StatusCodes.OK) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "Something went wrong while fetching the available rooms",
+			});
+
+			throw new InternalServerError(
+				"Something went wrong while fetching the available rooms",
+			);
+		}
+
+		// calculate the days
+		const totalNights = Math.ceil(
+			(checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24),
+		);
+
+		// check if so many rooms are available
+		const totalAvailableRooms= availableRoomsRes["data"].length
+		const totalRequiredRooms= totalNights * bookingData.totalRooms
+
+		if(totalRequiredRooms > totalAvailableRooms) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "Insufficient available rooms to fulfil your booking",
+			});
+
+			throw new ForbiddenError("Insufficient available rooms to fulfil your booking");
+		}
+
 		// generate an idempotency key
 		const idempotencyKey = uuidv4();
 
 		// create and acquire the lock
-		const lock = `lock:hotels:${bookingData.hotelId}`;
+		const lock = `lock:hotelId-${bookingData.hotelId}|roomTypeId-${bookingData.roomTypeId}`;
 		await redlock.acquire([lock], serverConfig.REDIS_LOCK_TTL);
 
 		const [newBooking] = await db
 			.insert(bookings)
 			.values({
-				...bookingData,
+				userId: bookingData.userId,
+				hotelId: bookingData.hotelId,
+				roomTypeId: bookingData.roomTypeId,
+				bookingAmount: bookingData.bookingAmount,
+				totalGuests: bookingData.totalGuests,
+				totalRooms: bookingData.totalRooms,
+				checkInDate,
+				checkOutDate,
+				totalNights,
 				idempotencyKey,
 			})
 			.$returningId();
@@ -126,6 +218,61 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 			...newBooking,
 			idempotencyKey,
 		});
+
+		// update the booking id on rooms to book them
+		let roomsIdsToBeBooked: number[]= []
+		let c= 0
+		let roomItem= null
+
+		while (c < totalRequiredRooms) {
+			roomItem= availableRoomsRes["data"][c]
+			roomsIdsToBeBooked.push(roomItem["id"])
+			c++
+		}
+
+		const bookRoomsUrl =
+			serverConfig.HOTEL_SERVICE_BASE_URL +
+			"/rooms/book-rooms";
+
+		response = await fetch(bookRoomsUrl, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				bookingId: newBooking.id,
+				roomIds: roomsIdsToBeBooked
+			})
+		});
+
+		const bookRoomsRes = await response.json();
+
+		if (response.status === StatusCodes.NOT_FOUND) {
+			logger.error("Rooms: createBooking -> failure", {
+				roomTypeId: bookingData.roomTypeId,
+				error: "Room type not found",
+			});
+
+			throw new NotFoundError("Room type not found");
+		} else if (response.status !== StatusCodes.OK) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "Something went wrong while fetching the available rooms",
+			});
+
+			throw new InternalServerError(
+				"Something went wrong while fetching the available rooms",
+			);
+		}
+
+		if(bookRoomsRes["data"]["affectedCount"] !== totalRequiredRooms) {
+			logger.error("Bookings: createBooking endpoint -> failure", {
+				error: "Failed to the book the available rooms",
+			});
+
+			throw new InternalServerError(
+				"Failed to the book the available rooms",
+			);
+		}
 
 		return {
 			...newBooking,
@@ -146,7 +293,8 @@ const createBooking = async (bookingData: CreateBookingDto) => {
 		} else if (
 			error instanceof NotFoundError ||
 			error instanceof InternalServerError ||
-			error instanceof BadRequestError
+			error instanceof BadRequestError ||
+			error instanceof ForbiddenError
 		) {
 			throw error;
 		} else {
@@ -370,136 +518,6 @@ const removeBookingById = async (id: number) => {
 	}
 };
 
-// update a single booking entry
-const updateBooking = async (id: number, bookingData: UpdateBookingDto) => {
-	try {
-		// check if the user even exists
-		if (bookingData.userId) {
-			const apiGatewayUrl =
-				serverConfig.API_GATEWAY_BASE_URL + "/users/" + bookingData.userId;
-
-			const response = await fetch(apiGatewayUrl);
-
-			if (response.status === StatusCodes.NOT_FOUND) {
-				logger.error("Bookings: createBooking endpoint -> failure", {
-					userId: bookingData.userId,
-					error: "User not found",
-				});
-
-				throw new NotFoundError("User not found");
-			} else if (response.status !== StatusCodes.OK) {
-				logger.error("Bookings: createBooking endpoint -> failure", {
-					userId: bookingData.userId,
-					error: "Something went wrong while checking if the user exists",
-				});
-
-				throw new InternalServerError(
-					"Something went wrong while checking if the user exists",
-				);
-			}
-		}
-
-		// check if the hotel even exists
-		if (bookingData.hotelId) {
-			const hotelServiceUrl =
-				serverConfig.HOTEL_SERVICE_BASE_URL + "/hotels/" + bookingData.hotelId;
-
-			const response = await fetch(hotelServiceUrl);
-
-			if (response.status === StatusCodes.NOT_FOUND) {
-				logger.error("Bookings: createBooking endpoint -> failure", {
-					hotelId: bookingData.hotelId,
-					error: "Hotel not found",
-				});
-
-				throw new NotFoundError("Hotel not found");
-			} else if (response.status !== StatusCodes.OK) {
-				logger.error("Bookings: createBooking endpoint -> failure", {
-					hotelId: bookingData.hotelId,
-					error: "Something went wrong while checking if the hotel exists",
-				});
-
-				throw new InternalServerError(
-					"Something went wrong while checking if the hotel exists",
-				);
-			}
-		}
-
-		// check if the room type even exists
-		if (bookingData.roomTypeId) {
-			const roomTypesUrl =
-				serverConfig.HOTEL_SERVICE_BASE_URL +
-				"/room-types/" +
-				bookingData.roomTypeId;
-
-			const response = await fetch(roomTypesUrl);
-			const roomTypeRes = await response.json();
-
-			if (response.status === StatusCodes.NOT_FOUND) {
-				logger.error("Bookings: updateBooking endpoint -> failure", {
-					roomTypeId: bookingData.roomTypeId,
-					error: "Room type not found",
-				});
-
-				throw new NotFoundError("Room type not found");
-			} else if (response.status !== StatusCodes.OK) {
-				logger.error("Bookings: updateBooking endpoint -> failure", {
-					roomTypeId: bookingData.roomTypeId,
-					error: "Something went wrong while checking if the room type exists",
-				});
-
-				throw new InternalServerError(
-					"Something went wrong while checking if the room type exists",
-				);
-			}
-
-			// check if the hotelId mentioned in the roomType, matches the user sent hotelId
-			if (roomTypeRes.data.hotelId !== bookingData.hotelId) {
-				logger.error("Bookings: updateBooking endpoint -> failure", {
-					error: "Invalid room type has been provided for the specific hotel",
-				});
-
-				throw new BadRequestError(
-					"Invalid room type has been provided for the specific hotel",
-				);
-			}
-		}
-
-		const [result] = await db
-			.update(bookings)
-			.set(bookingData)
-			.where(eq(bookings.id, id));
-
-		if (result.affectedRows === 0) {
-			logger.error("Bookings: updateBooking endpoint -> failure", {
-				id,
-				error: "Booking not found",
-			});
-
-			throw new NotFoundError("Booking not found");
-		}
-
-		logger.info("Bookings: updateBooking endpoint -> success", {
-			id,
-		});
-	} catch (error) {
-		if (
-			error instanceof NotFoundError ||
-			error instanceof BadRequestError ||
-			error instanceof InternalServerError
-		) {
-			throw error;
-		} else {
-			logger.error("Bookings: updateBooking endpoint -> failure", error);
-
-			throw new InternalServerError(
-				"Something went wrong while updating the booking",
-				error instanceof Error ? error.stack : undefined,
-			);
-		}
-	}
-};
-
 export {
 	createBooking,
 	finalizeBooking,
@@ -508,5 +526,4 @@ export {
 	getAllBookings,
 	getBookingById,
 	removeBookingById,
-	updateBooking,
 };
